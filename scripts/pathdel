@@ -1,0 +1,22 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+    echo "Usage: pathdel <directory>"
+    exit 1
+fi
+
+DIR="$(realpath "$1")"
+BASHRC="$HOME/.bashrc"
+
+if grep -Fq "$DIR" "$BASHRC"; then
+    grep -Fv "$DIR" "$BASHRC" > "$BASHRC.tmp" && mv "$BASHRC.tmp" "$BASHRC"
+    echo "Removed from .bashrc: $DIR"
+else
+    echo "No such PATH entry in .bashrc: $DIR"
+fi
+
+PATH=$(echo "$PATH" | tr ':' '\n' | grep -v -F "$DIR" | paste -sd ':' -)
+export PATH="$PATH"
+
+echo "Removed from current session PATH: $DIR"
+

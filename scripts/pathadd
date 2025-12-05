@@ -1,0 +1,19 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+    echo "Usage: pathadd <directory>"
+    return 1 2>/dev/null || exit 1
+fi
+
+DIR="$(realpath "$1")"
+BASHRC="$HOME/.bashrc"
+
+if echo "$PATH" | tr ':' '\n' | grep -Fxq "$DIR"; then
+    echo "$DIR is already in PATH"
+    return 0 2>/dev/null || exit 0
+fi
+
+echo "export PATH=\"\$PATH:$DIR\"" >> "$BASHRC"
+export PATH="$PATH:$DIR"
+
+echo "Added to PATH and .bashrc: $DIR"

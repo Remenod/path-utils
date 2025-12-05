@@ -1,0 +1,24 @@
+#!/bin/bash
+
+RED="\e[31m"
+YELLOW="\e[33m"
+RESET="\e[0m"
+
+IFS=':' read -ra DIRS <<< "$PATH"
+declare -A seen
+
+echo "Directories in PATH:"
+for dir in "${DIRS[@]}"; do
+    [[ -z "$dir" ]] && continue
+
+    if [[ -z "${seen[$dir]}" ]]; then
+        seen["$dir"]=1
+        if [ -d "$dir" ]; then
+            echo "  $dir"
+        else
+            echo -e "  ${RED}$dir (does not exist)${RESET}"
+        fi
+    else
+        echo -e "  ${YELLOW}$dir (duplicate)${RESET}"
+    fi
+done
