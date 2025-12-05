@@ -4,16 +4,15 @@ pkgver=1.0.0
 pkgrel=1
 pkgdesc="useful .bashrc PATH generation tools"
 arch=('x86_64')
-url="https://github.com/Remenod/path-utils.git"
+url="https://github.com/Remenod/path-utils"
 license=('MIT')
-depends=()
 
-scripts=("pathadd" "pathdel" "pathls")
-source=("${scripts[@]/#/scripts/}")
-sha256sums=('SKIP' 'SKIP' 'SKIP')
+source=("$pkgname::git+https://github.com/Remenod/path-utils.git")
+sha256sums=('SKIP')
 
 package() {
-    for script in "${scripts[@]}"; do
-        install -Dm755 "$srcdir/scripts/$script" "$pkgdir/usr/bin/$script"
+    cd "$srcdir/$pkgname/scripts"
+    for script in *; do
+        install -Dm755 "$script" "$pkgdir/usr/bin/$script"
     done
 }
