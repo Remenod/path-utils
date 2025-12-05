@@ -5,7 +5,7 @@
 ### AUR
 
 ```bash
-not yet
+yay -S path-utils
 ```
 
 ### wget
