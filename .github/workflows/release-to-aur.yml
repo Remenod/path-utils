@@ -3,8 +3,7 @@ name: Release to AUR
 on:
   workflow_run:
     workflows: ["Check PKGBUILD"]
-    types:
-      - completed
+    types: [completed]
 
 jobs:
   bump-and-push:
@@ -21,43 +20,53 @@ jobs:
         run: |
           pacman -Syu --noconfirm --needed base-devel devtools git sudo
 
-      - name: Set up SSH for AUR
-        uses: webfactory/ssh-agent@v0.8.1
-        with:
-          ssh-private-key: ${{ secrets.AUR_SSH_KEY }}
+      - name: Set up SSH key manually
+        run: |
+          mkdir -p /root/.ssh
+          echo "${{ secrets.AUR_SSH_KEY }}" > /root/.ssh/id_ed25519
+          chmod 600 /root/.ssh/id_ed25519
+
+          cat <<EOF > /root/.ssh/config
+          Host aur.archlinux.org
+            User aur
+            IdentityFile /root/.ssh/id_ed25519
+            StrictHostKeyChecking no
+          EOF
 
       - name: Configure Git
         run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
 
-      - name: Fix permissions for builder
+      - name: Create builder user
         run: |
           useradd -m builder
           echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
           chown -R builder:builder .
 
-      - name: Increment pkgrel in PKGBUILD
+      - name: Increment pkgrel
         id: bump
         run: |
-          sudo -u builder bash -c "
-          current=\$(grep '^pkgrel=' PKGBUILD | cut -d= -f2)
-          new=\$((current + 1))
-          sed -i \"s/^pkgrel=.*/pkgrel=\$new/\" PKGBUILD
-          echo \"Bumped pkgrel: \$current → \$new\"
-          echo \"new=\$new\" >> /github/env
-          "
+          sudo -u builder bash -c '
+            current=$(grep "^pkgrel=" PKGBUILD | cut -d= -f2)
+            new=$((current + 1))
+            sed -i "s/^pkgrel=.*/pkgrel=$new/" PKGBUILD
+            echo "new=$new" >> /github/env
+          '
 
       - name: Generate .SRCINFO
-        run: sudo -u builder makepkg --printsrcinfo > .SRCINFO
+        run: |
+          sudo -u builder makepkg --printsrcinfo > .SRCINFO
 
       - name: Add AUR remote
-        run: git remote add aur "ssh://aur@aur.archlinux.org/path-utils.git"
+        run: |
+          git remote add aur ssh://aur@aur.archlinux.org/path-utils.git
 
-      - name: Commit version bump and .SRCINFO
+      - name: Commit changes
         run: |
           git add PKGBUILD .SRCINFO
-          git commit -m "Bump pkgrel to ${{ env.new }} [skip ci]"
+          git commit -m "Bump pkgrel to ${{ env.new }} [skip ci]" || echo "No changes to commit"
 
       - name: Push to AUR
-        run: git push aur master
+        run: |
+          git push aur master
