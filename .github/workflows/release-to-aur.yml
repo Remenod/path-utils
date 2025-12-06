@@ -47,12 +47,14 @@ jobs:
       - name: Increment pkgrel
         id: bump
         run: |
-          sudo -u builder bash -c '
-            current=$(grep "^pkgrel=" PKGBUILD | cut -d= -f2)
-            new=$((current + 1))
-            sed -i "s/^pkgrel=.*/pkgrel=$new/" PKGBUILD
-            echo "new=$new" >> /github/env
-          '
+          current=$(grep "^pkgrel=" PKGBUILD | cut -d= -f2)
+          new=$((current + 1))
+
+          sudo -u builder sed -i "s/^pkgrel=.*/pkgrel=$new/" PKGBUILD
+
+          echo "Bumped pkgrel: $current → $new"
+
+          echo "new=$new" >> $GITHUB_ENV
 
       - name: Generate .SRCINFO
         run: |
