@@ -11,20 +11,28 @@ jobs:
     container: archlinux:latest
 
     steps:
-      - name: Install dependencies
+      - name: Install base-devel, devtools, namcap
         run: |
-          pacman -Sy --noconfirm base-devel git devtools namcap
+          pacman -Sy --noconfirm git base-devel devtools namcap sudo
+          # Створити користувача без пароля
+          useradd -m builder
+          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Fix permissions for builder
+        run: |
+          chown -R builder:builder .
 
       - name: Generate .SRCINFO
         run: |
-          makepkg --printsrcinfo > .SRCINFO
+          sudo -u builder makepkg --printsrcinfo > .SRCINFO
 
       - name: Run namcap
-        run: namcap PKGBUILD || true
-
-      - name: Makepkg
         run: |
-          makepkg -scr --noconfirm
+          sudo -u builder namcap PKGBUILD || true
+
+      - name: Build package
+        run: |
+          sudo -u builder makepkg -sc --noconfirm
