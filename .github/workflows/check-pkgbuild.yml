@@ -1,0 +1,82 @@
+name: Check PKGBUILD
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "scripts/**"
+      - ".github/workflows/**"
+      - "./PKGBUILD"
+
+  pull_request:
+    paths:
+      - "scripts/**"
+      - ".github/workflows/**"
+      - "./PKGBUILD"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    container: archlinux:latest
+
+    steps:
+      - name: Install base-devel, devtools, namcap
+        run: |
+          pacman -Sy --noconfirm git base-devel devtools namcap sudo
+          useradd -m builder
+          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Fix permissions for builder
+        run: chown -R builder:builder .
+
+      - name: Generate .SRCINFO
+        run: sudo -u builder makepkg --printsrcinfo > .SRCINFO
+
+      - name: Run namcap
+        run: sudo -u builder namcap PKGBUILD || true
+
+      - name: Build package
+        run: sudo -u builder makepkg -sc --noconfirm
+
+      - name: Install built package
+        run: |
+          pkgfile=$(ls *.pkg.tar.*)
+          pacman -U --noconfirm "$pkgfile"
+
+      - name: Run script tests
+        run: |
+          echo "PATH = $PATH"
+
+          scripts=(scripts/*)
+
+          for s in "${scripts[@]}"; do
+            if [[ ! -f "$s" ]]; then
+              continue
+            fi
+
+            script_name=$(basename "$s")
+            echo "Testing script: $script_name"
+
+            if [[ ! -f "/usr/bin/$script_name" ]]; then
+              echo "::error::Script $script_name not found in /usr/bin"
+              exit 1
+            fi
+
+            if ! command -v "$script_name" >/dev/null 2>&1; then
+              echo "::error::Command $script_name not in PATH"
+              exit 1
+            fi
+
+            "$script_name" --help >/dev/null 2>&1 || {
+              echo "::error::Script $script_name cannot run --help"
+              exit 1
+            }
+
+            echo "OK: $script_name works."
+          done
+
