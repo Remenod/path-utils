@@ -2,7 +2,18 @@ name: Check PKGBUILD
 
 on:
   push:
+    branches:
+      - master
+    paths:
+      - "scripts/**"
+      - ".github/workflows/**"
+      - "./PKGBUILD"
+
   pull_request:
+    paths:
+      - "scripts/**"
+      - ".github/workflows/**"
+      - "./PKGBUILD"
 
 jobs:
   build:
