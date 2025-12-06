@@ -15,17 +15,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Bump pkgrel
-        id: bump
+      - name: Get current pkgrel from AUR
+        id: get_pkgrel
         run: |
-          current=$(grep "^pkgrel=" PKGBUILD | cut -d= -f2)
-          new=$((current + 1))
-          
-          sed -i "s/^pkgrel=.*/pkgrel=$new/" PKGBUILD
-          
-          echo "Bumped pkgrel: $current → $new"
-          
-          echo "new_pkgrel=$new" >> $GITHUB_ENV
+          pkgbuild_url="https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=path-utils"
+          aur_pkgrel=$(curl -s "$pkgbuild_url" | grep '^pkgrel=' | cut -d= -f2)
+          if [ -z "$aur_pkgrel" ]; then
+            echo "Could not read pkgrel from AUR, defaulting to 0"
+            aur_pkgrel=0
+          fi
+          echo "Current AUR pkgrel: $aur_pkgrel"
+          new_pkgrel=$((aur_pkgrel + 1))
+          sed -i "s/^pkgrel=.*/pkgrel=$new_pkgrel/" PKGBUILD
+          echo "new_pkgrel=$new_pkgrel" >> $GITHUB_ENV
+          echo "Bumped pkgrel: $aur_pkgrel → $new_pkgrel"
 
       - name: Publish to AUR
         uses: KSXGitHub/github-actions-deploy-aur@v4.1.1
@@ -37,11 +40,3 @@ jobs:
           ssh_private_key: ${{ secrets.AUR_SSH_KEY }}
           commit_message: "Bump pkgrel to ${{ env.new_pkgrel }}"
           ssh_keyscan_types: rsa,ecdsa,ed25519
-
-      - name: Commit updated PKGBUILD with [skip ci]
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add PKGBUILD
-          git commit -m "Update pkgrel to ${{ env.new_pkgrel }} [skip ci]" || echo "No changes to commit"
-          git push origin master || echo "Push failed (maybe no changes)"
