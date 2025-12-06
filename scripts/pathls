@@ -1,5 +1,18 @@
 #!/bin/bash
 
+# Help
+if [ "$1" = "--help" ] || [ "$1" = "-h" ] || [ -z "$1" ]; then
+    echo ""
+    echo "Usage: pathls"
+    echo ""
+    echo "Shows all directories in PATH"
+    echo ""
+    echo "Options:"
+    echo "  -h, --help     Show this help message"
+    return 0 2>/dev/null || exit 0
+fi
+
+
 RED="\e[31m"
 YELLOW="\e[33m"
 RESET="\e[0m"
