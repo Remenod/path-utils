@@ -6,69 +6,46 @@ on:
     types: [completed]
 
 jobs:
-  bump-and-push:
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'master' }}
-
+  publish_aur_package:
     runs-on: ubuntu-latest
-    container: archlinux:latest
+
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'master' }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install base-devel and devtools
+      - name: Install Git
+        run: sudo apt update && sudo apt install -y git
+
+      - name: Clone AUR repo to get current pkgrel
         run: |
-          pacman -Syu --noconfirm --needed base-devel devtools git sudo
+          git clone --depth=1 ssh://aur@aur.archlinux.org/path-utils.git aur-temp
+          current=$(grep "^pkgrel=" aur-temp/PKGBUILD | cut -d= -f2)
+          echo "current_pkgrel=$current" >> $GITHUB_ENV
 
-      - name: Set up SSH key
+      - name: Bump pkgrel in GitHub PKGBUILD
         run: |
-          mkdir -p /root/.ssh
-          echo "${{ secrets.AUR_SSH_KEY }}" > /root/.ssh/id_ed25519
-          chmod 600 /root/.ssh/id_ed25519
+          new=$((env.current_pkgrel + 1))
+          sed -i "s/^pkgrel=.*/pkgrel=$new/" PKGBUILD
+          echo "Bumped pkgrel from ${{ env.current_pkgrel }} → $new"
+          echo "new_pkgrel=$new" >> $GITHUB_ENV
 
-          cat <<EOF > /root/.ssh/config
-          Host aur.archlinux.org
-            User aur
-            IdentityFile /root/.ssh/id_ed25519
-            StrictHostKeyChecking no
-          EOF
+      - name: Publish to AUR
+        uses: KSXGitHub/github-actions-deploy-aur@v4.1.1
+        with:
+          pkgname: path-utils
+          pkgbuild: ./PKGBUILD
+          commit_username: ${{ secrets.AUR_USERNAME }}
+          commit_email: ${{ secrets.AUR_EMAIL }}
+          ssh_private_key: ${{ secrets.AUR_SSH_KEY }}
+          commit_message: "Bump pkgrel to ${{ env.new_pkgrel }}"
+          ssh_keyscan_types: rsa,ecdsa,ed25519
 
-      - name: Create builder user
+      - name: Commit updated PKGBUILD back to GitHub
         run: |
-          useradd -m builder
-          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-          chown -R builder:builder .
-
-      - name: Increment pkgrel
-        id: bump
-        run: |
-          current=$(grep "^pkgrel=" PKGBUILD | cut -d= -f2)
-          new=$((current + 1))
-
-          sudo -u builder sed -i "s/^pkgrel=.*/pkgrel=$new/" PKGBUILD
-
-          echo "Bumped pkgrel: $current → $new"
-
-          echo "new=$new" >> $GITHUB_ENV
-
-      - name: Generate .SRCINFO
-        run: |
-          sudo -u builder makepkg --printsrcinfo > .SRCINFO
-
-      - name: Configure Git for builder
-        run: |
-          sudo -u builder git config --global user.name "github-actions"
-          sudo -u builder git config --global user.email "github-actions@github.com"
-
-      - name: Add AUR remote
-        run: |
-          sudo -u builder git -C "$GITHUB_WORKSPACE" remote add aur ssh://aur@aur.archlinux.org/path-utils.git
-
-      - name: Commit changes
-        run: |
-          sudo -u builder git -C "$GITHUB_WORKSPACE" add PKGBUILD .SRCINFO
-          sudo -u builder git -C "$GITHUB_WORKSPACE" commit -m "Bump pkgrel to ${{ env.new }} [skip ci]" || echo "No changes to commit"
-          
-      - name: Push to AUR
-        run: |
-          sudo -u builder git -C "$GITHUB_WORKSPACE" push aur master
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add PKGBUILD
+          git commit -m "Update pkgrel to ${{ env.new_pkgrel }} [skip ci]" || echo "No changes to commit"
+          git push origin master || echo "Push failed (maybe no changes)"
