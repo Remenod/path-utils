@@ -15,20 +15,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Git
-        run: sudo apt update && sudo apt install -y git
-
-      - name: Clone AUR repo to get current pkgrel
+      - name: Bump pkgrel
+        id: bump
         run: |
-          git clone --depth=1 ssh://aur@aur.archlinux.org/path-utils.git aur-temp
-          current=$(grep "^pkgrel=" aur-temp/PKGBUILD | cut -d= -f2)
-          echo "current_pkgrel=$current" >> $GITHUB_ENV
-
-      - name: Bump pkgrel in GitHub PKGBUILD
-        run: |
-          new=$((env.current_pkgrel + 1))
+          current=$(grep "^pkgrel=" PKGBUILD | cut -d= -f2)
+          new=$((current + 1))
+          
           sed -i "s/^pkgrel=.*/pkgrel=$new/" PKGBUILD
-          echo "Bumped pkgrel from ${{ env.current_pkgrel }} → $new"
+          
+          echo "Bumped pkgrel: $current → $new"
+          
           echo "new_pkgrel=$new" >> $GITHUB_ENV
 
       - name: Publish to AUR
@@ -42,7 +38,7 @@ jobs:
           commit_message: "Bump pkgrel to ${{ env.new_pkgrel }}"
           ssh_keyscan_types: rsa,ecdsa,ed25519
 
-      - name: Commit updated PKGBUILD back to GitHub
+      - name: Commit updated PKGBUILD with [skip ci]
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
