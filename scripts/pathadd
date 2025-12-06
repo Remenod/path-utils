@@ -1,8 +1,15 @@
 #!/bin/bash
 
-if [ -z "$1" ]; then
+# Help
+if [ "$1" = "--help" ] || [ "$1" = "-h" ] || [ -z "$1" ]; then
+    echo ""
     echo "Usage: pathadd <directory>"
-    return 1 2>/dev/null || exit 1
+    echo ""
+    echo "Adds the directory to PATH and appends it to ~/.bashrc"
+    echo ""
+    echo "Options:"
+    echo "  -h, --help     Show this help message"
+    return 0 2>/dev/null || exit 0
 fi
 
 DIR="$(realpath "$1")"
