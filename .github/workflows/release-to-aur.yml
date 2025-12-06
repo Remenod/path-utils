@@ -62,7 +62,7 @@ jobs:
 
       - name: Add AUR remote
         run: |
-          run: sudo -u builder git -C "$GITHUB_WORKSPACE" remote add aur ssh://aur@aur.archlinux.org/path-utils.git
+          sudo -u builder git -C "$GITHUB_WORKSPACE" remote add aur ssh://aur@aur.archlinux.org/path-utils.git
 
       - name: Commit changes
         run: |
