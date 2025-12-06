@@ -45,9 +45,9 @@ jobs:
           current=$(grep "^pkgrel=" PKGBUILD | cut -d= -f2)
           new=$((current + 1))
 
-          echo "Updating pkgrel: $current → $new"
-
           sudo -u builder sed -i "s/^pkgrel=.*/pkgrel=$new/" PKGBUILD
+
+          echo "Bumped pkgrel: $current → $new"
 
           echo "new=$new" >> $GITHUB_ENV
 
@@ -62,13 +62,13 @@ jobs:
 
       - name: Add AUR remote
         run: |
-          sudo -u builder git remote add aur ssh://aur@aur.archlinux.org/path-utils.git
+          run: sudo -u builder git -C "$GITHUB_WORKSPACE" remote add aur ssh://aur@aur.archlinux.org/path-utils.git
 
       - name: Commit changes
         run: |
-          sudo -u builder git add PKGBUILD .SRCINFO
-          sudo -u builder git commit -m "Bump pkgrel to ${{ env.new }} [skip ci]" || echo "No changes to commit"
-
+          sudo -u builder git -C "$GITHUB_WORKSPACE" add PKGBUILD .SRCINFO
+          sudo -u builder git -C "$GITHUB_WORKSPACE" commit -m "Bump pkgrel to ${{ env.new }} [skip ci]" || echo "No changes to commit"
+          
       - name: Push to AUR
         run: |
-          sudo -u builder git push aur master
+          sudo -u builder git -C "$GITHUB_WORKSPACE" push aur master
