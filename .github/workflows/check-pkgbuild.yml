@@ -8,39 +8,23 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    container: archlinux:latest
+
     steps:
+      - name: Install dependencies
+        run: |
+          pacman -Sy --noconfirm base-devel git devtools namcap
+
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install tools
-        run: |
-          sudo apt update
-          sudo apt install -y wget tar arch-install-scripts
-
-      - name: Bootstrap Arch rootfs
-        run: |
-          mkdir arch
-          wget https://geo.mirror.pkgbuild.com/iso/latest/archlinux-bootstrap-x86_64.tar.gz
-          tar xzf archlinux-bootstrap-*.tar.gz -C arch --strip-components=1
-
-          sudo sed -i 's/^#ParallelDownloads/ParallelDownloads/' arch/etc/pacman.conf
-
-          sudo arch/root.x86_64/bin/pacman-key --init
-          sudo arch/root.x86_64/bin/pacman-key --populate archlinux
-
-      - name: Install base-devel and devtools
-        run: |
-          sudo arch/root.x86_64/bin/pacman -Sy --noconfirm base-devel devtools namcap
-
       - name: Generate .SRCINFO
         run: |
-          arch/root.x86_64/bin/makepkg --printsrcinfo > .SRCINFO
+          makepkg --printsrcinfo > .SRCINFO
 
       - name: Run namcap
-        run: |
-          arch/root.x86_64/bin/namcap PKGBUILD || true
+        run: namcap PKGBUILD || true
 
-      - name: Build in chroot
+      - name: Makepkg
         run: |
-          sudo arch/usr/bin/mkarchroot arch/chroot base-devel
-          arch/usr/bin/makechrootpkg -c -r arch/chroot
+          makepkg -scr --noconfirm
