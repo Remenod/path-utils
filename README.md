@@ -2,7 +2,7 @@
 
 ## Overview
 
-Path Utils is a set of lightweight Bash scripts for managing your `PATH` environment variable in a convenient and safe way. It allows you to add directories to `PATH`, remove them, and list all current entries, highlighting duplicates and non-existent paths.
+Path Utils is a set of lightweight Bash scripts for managing your `PATH` environment variable in a convenient and safe way. It allows you to add directories to `PATH`, remove them, and list all current entries, highlighting duplicates and non-existent paths. The scripts support **both Bash and Zsh** shells.
 
 ## Project Structure
 
@@ -44,7 +44,7 @@ curl -fsSL https://raw.githubusercontent.com/Remenod/path-utils/master/install.s
 
 ### `pathadd`
 
-Add a directory to your `PATH` and append it to your `.bashrc` for persistence.
+Add a directory to your `PATH` and append it to your `.bashrc` or `.zshrc` for persistence.
 
 ```bash
 source pathadd <directory>
@@ -52,18 +52,18 @@ source pathadd <directory>
 
 * Resolves the full path using `realpath`
 * Checks if the directory already exists in `PATH`
-* Updates the current session and `.bashrc`
+* Updates the current session and the appropriate shell config file (`.bashrc` or `.zshrc`)
 
 ### `pathdel`
 
-Remove a directory from your `PATH` and `.bashrc`.
+Remove a directory from your `PATH` and `.bashrc`/`.zshrc`.
 
 ```bash
 source pathdel <directory>
 ```
 
 * Removes the entry from the current session
-* Cleans the `.bashrc` to remove persistent entries
+* Cleans the shell configuration file to remove persistent entries
 
 ### `pathls`
 
@@ -80,14 +80,14 @@ pathls
 ## Current Features
 
 * Simple, Bash-only scripts with no external dependencies
-* Safe updates to `.bashrc` and current session `PATH`
+* Safe updates to `.bashrc`/`.zshrc` and current session `PATH`
 * Detection of duplicates and invalid directories
+* Supports **Bash** and **Zsh** shells
 
 ## Future Plans
 
-* Check if the current shell is Bash and provide warnings if not
-* Enhance cross-shell support (Zsh, Fish) with proper detection and updates
-* Introduce some kind of CLI for each script
+* Enhance cross-shell support for Fish and other shells
+* Introduce a CLI interface for each script
 
 ## License
 
