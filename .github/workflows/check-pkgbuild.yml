@@ -6,12 +6,12 @@ on:
       - master
     paths:
       - "scripts/**"
-      - "./PKGBUILD"
+      - "PKGBUILD"
 
   pull_request:
     paths:
       - "scripts/**"
-      - "./PKGBUILD"
+      - "PKGBUILD"
 
 jobs:
   build:
