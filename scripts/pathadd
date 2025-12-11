@@ -1,11 +1,9 @@
-#!/bin/bash
-
 # Help
 if [ "$1" = "--help" ] || [ "$1" = "-h" ] || [ -z "$1" ]; then
     echo ""
     echo "Usage: pathadd <directory>"
     echo ""
-    echo "Adds the directory to PATH and appends it to ~/.bashrc"
+    echo "Adds the directory to PATH and appends it to the appropriate shell config (~/.bashrc or ~/.zshrc)"
     echo ""
     echo "Options:"
     echo "  -h, --help     Show this help message"
@@ -13,14 +11,24 @@ if [ "$1" = "--help" ] || [ "$1" = "-h" ] || [ -z "$1" ]; then
 fi
 
 DIR="$(realpath "$1")"
-BASHRC="$HOME/.bashrc"
+
+USER_SHELL=$(basename "$SHELL")
+
+if [ "$USER_SHELL" = "zsh" ]; then
+    SHELL_RC="$HOME/.zshrc"
+elif [ "$USER_SHELL" = "bash" ]; then
+    SHELL_RC="$HOME/.bashrc"
+else
+    echo "Unsupported shell: $USER_SHELL"
+    exit 1
+fi
 
 if echo "$PATH" | tr ':' '\n' | grep -Fxq "$DIR"; then
     echo "$DIR is already in PATH"
     return 0 2>/dev/null || exit 0
 fi
 
-echo "export PATH=\"\$PATH:$DIR\"" >> "$BASHRC"
+echo "export PATH=\"\$PATH:$DIR\"" >> "$SHELL_RC"
 export PATH="$PATH:$DIR"
 
-echo "Added to PATH and .bashrc: $DIR"
+echo "Added to PATH and $SHELL_RC: $DIR"

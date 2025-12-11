@@ -1,11 +1,9 @@
-#!/bin/bash
-
 # Help
 if [ "$1" = "--help" ] || [ "$1" = "-h" ] || [ -z "$1" ]; then
     echo ""
     echo "Usage: pathdel <directory>"
     echo ""
-    echo "Deletes the directory from PATH and ~/.bashrc"
+    echo "Deletes the directory from PATH and the appropriate shell config (~/.bashrc or ~/.zshrc)"
     echo ""
     echo "Options:"
     echo "  -h, --help     Show this help message"
@@ -13,17 +11,26 @@ if [ "$1" = "--help" ] || [ "$1" = "-h" ] || [ -z "$1" ]; then
 fi
 
 DIR="$(realpath "$1")"
-BASHRC="$HOME/.bashrc"
 
-if grep -Fq "$DIR" "$BASHRC"; then
-    grep -Fv "$DIR" "$BASHRC" > "$BASHRC.tmp" && mv "$BASHRC.tmp" "$BASHRC"
-    echo "Removed from .bashrc: $DIR"
+USER_SHELL=$(basename "$SHELL")
+
+if [ "$USER_SHELL" = "zsh" ]; then
+    SHELL_RC="$HOME/.zshrc"
+elif [ "$USER_SHELL" = "bash" ]; then
+    SHELL_RC="$HOME/.bashrc"
 else
-    echo "No such PATH entry in .bashrc: $DIR"
+    echo "Unsupported shell: $USER_SHELL"
+    exit 1
+fi
+
+if [ -f "$SHELL_RC" ] && grep -Fq "$DIR" "$SHELL_RC"; then
+    grep -Fv "$DIR" "$SHELL_RC" > "$SHELL_RC.tmp" && mv "$SHELL_RC.tmp" "$SHELL_RC"
+    echo "Removed from $SHELL_RC: $DIR"
+else
+    echo "No such PATH entry in $SHELL_RC: $DIR"
 fi
 
 PATH=$(echo "$PATH" | tr ':' '\n' | grep -v -F "$DIR" | paste -sd ':' -)
 export PATH="$PATH"
 
 echo "Removed from current session PATH: $DIR"
-
