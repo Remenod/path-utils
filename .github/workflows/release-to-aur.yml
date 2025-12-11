@@ -15,15 +15,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Get current pkgver and pkgrel from AUR
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Get AUR pkgver and pkgrel
         id: get_pkg_info
         run: |
-          pkgbuild_url="https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=path-utils"
-          aur_pkgver=$(curl -s "$pkgbuild_url" | grep '^pkgver=' | cut -d= -f2)
-          aur_pkgrel=$(curl -s "$pkgbuild_url" | grep '^pkgrel=' | cut -d= -f2)
+          pkgname="path-utils"
+          aur_json=$(curl -s "https://aur.archlinux.org/rpc/?v=5&type=info&arg=path-utils")
 
-          [ -z "$aur_pkgver" ] && aur_pkgver="0"
-          [ -z "$aur_pkgrel" ] && aur_pkgrel="0"
+          aur_pkgver=$(echo "$aur_json" | jq -r '.results[0].Version' | cut -d- -f1)
+          aur_pkgrel=$(echo "$aur_json" | jq -r '.results[0].Version' | cut -d- -f2)
 
           echo "AUR pkgver: $aur_pkgver"
           echo "AUR pkgrel: $aur_pkgrel"
@@ -31,10 +33,14 @@ jobs:
           local_pkgver=$(grep '^pkgver=' PKGBUILD | cut -d= -f2)
           echo "Local pkgver: $local_pkgver"
 
-          if [[ "$local_pkgver" > "$aur_pkgver" ]]; then
+          highest_ver=$(printf "%s\n%s" "$local_pkgver" "$aur_pkgver" | sort -V | tail -n1)
+
+          if [[ "$highest_ver" == "$local_pkgver" && "$local_pkgver" != "$aur_pkgver" ]]; then
+            # Local pkgver is newer -> reset pkgrel to 1
             sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
-            echo "pkgver increased. Reset pkgrel to 1"
             echo "new_pkgrel=1" >> $GITHUB_ENV
+            echo "pkgver increased: reset pkgrel to 1"
+
           else
             new_pkgrel=$((aur_pkgrel + 1))
             sed -i "s/^pkgrel=.*/pkgrel=$new_pkgrel/" PKGBUILD
@@ -50,5 +56,5 @@ jobs:
           commit_username: ${{ secrets.AUR_USERNAME }}
           commit_email: ${{ secrets.AUR_EMAIL }}
           ssh_private_key: ${{ secrets.AUR_SSH_KEY }}
-          commit_message: "Bump pkgrel to ${{ env.new_pkgrel }}"
+          commit_message: "Update: pkgver/pkgrel → ${{ env.new_pkgrel }}"
           ssh_keyscan_types: rsa,ecdsa,ed25519
