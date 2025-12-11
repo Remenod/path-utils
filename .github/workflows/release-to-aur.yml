@@ -15,20 +15,32 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Get current pkgrel from AUR
-        id: get_pkgrel
+      - name: Get current pkgver and pkgrel from AUR
+        id: get_pkg_info
         run: |
           pkgbuild_url="https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=path-utils"
+          aur_pkgver=$(curl -s "$pkgbuild_url" | grep '^pkgver=' | cut -d= -f2)
           aur_pkgrel=$(curl -s "$pkgbuild_url" | grep '^pkgrel=' | cut -d= -f2)
-          if [ -z "$aur_pkgrel" ]; then
-            echo "Could not read pkgrel from AUR, defaulting to 0"
-            aur_pkgrel=0
+
+          [ -z "$aur_pkgver" ] && aur_pkgver="0"
+          [ -z "$aur_pkgrel" ] && aur_pkgrel="0"
+
+          echo "AUR pkgver: $aur_pkgver"
+          echo "AUR pkgrel: $aur_pkgrel"
+
+          local_pkgver=$(grep '^pkgver=' PKGBUILD | cut -d= -f2)
+          echo "Local pkgver: $local_pkgver"
+
+          if [[ "$local_pkgver" > "$aur_pkgver" ]]; then
+            sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+            echo "pkgver increased. Reset pkgrel to 1"
+            echo "new_pkgrel=1" >> $GITHUB_ENV
+          else
+            new_pkgrel=$((aur_pkgrel + 1))
+            sed -i "s/^pkgrel=.*/pkgrel=$new_pkgrel/" PKGBUILD
+            echo "new_pkgrel=$new_pkgrel" >> $GITHUB_ENV
+            echo "Bumped pkgrel: $aur_pkgrel → $new_pkgrel"
           fi
-          echo "Current AUR pkgrel: $aur_pkgrel"
-          new_pkgrel=$((aur_pkgrel + 1))
-          sed -i "s/^pkgrel=.*/pkgrel=$new_pkgrel/" PKGBUILD
-          echo "new_pkgrel=$new_pkgrel" >> $GITHUB_ENV
-          echo "Bumped pkgrel: $aur_pkgrel → $new_pkgrel"
 
       - name: Publish to AUR
         uses: KSXGitHub/github-actions-deploy-aur@v4.1.1

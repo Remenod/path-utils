@@ -6,13 +6,11 @@ on:
       - master
     paths:
       - "scripts/**"
-      - ".github/workflows/**"
       - "./PKGBUILD"
 
   pull_request:
     paths:
       - "scripts/**"
-      - ".github/workflows/**"
       - "./PKGBUILD"
 
 jobs:
